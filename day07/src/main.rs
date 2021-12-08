@@ -11,18 +11,28 @@ fn parse(input: &str) -> Result<Vec<i32>> {
 }
 
 fn l1_distance(xi: &[i32], y: i32) -> i32 {
-    xi.iter().copied().map(|x| (x - y).abs()).sum()
+    xi.iter().copied().map(move |x| (x - y).abs()).sum()
 }
 
-fn part_a(input: &[i32]) -> i32 {
+#[inline]
+fn part_b_metric(x: i32, y: i32) -> i32 {
+    let dist = (x - y).abs();
+    ((dist) * (dist + 1)) / 2
+}
+
+fn part_b_distance(xi: &[i32], y: i32) -> i32 {
+    xi.iter().copied().map(move |x| part_b_metric(x, y)).sum()
+}
+
+fn solve(input: &[i32], distance: fn(&[i32], i32) -> i32) -> i32 {
     let average = input.iter().sum::<i32>() / (input.len() as i32);
     let mut candidate = average;
-    let mut candidate_dist = l1_distance(input, candidate);
+    let mut candidate_dist = distance(input, candidate);
     loop {
         let left_cand = candidate - 1;
         let right_cand = candidate + 1;
-        let left_cand_dist = l1_distance(input, left_cand);
-        let right_cand_dist = l1_distance(input, right_cand);
+        let left_cand_dist = distance(input, left_cand);
+        let right_cand_dist = distance(input, right_cand);
         if left_cand_dist < candidate_dist {
             candidate = left_cand;
             candidate_dist = left_cand_dist;
@@ -40,7 +50,9 @@ fn main() -> Result<()> {
     let input_str =
         if std::env::args().any(|x| x == "sample") { SAMPLE } else { PUZZLE };
     let input = parse(input_str)?;
-    let soln_a = part_a(&input);
+    let soln_a = solve(&input, l1_distance);
     println!("Part a: {}", soln_a);
+    let soln_b = solve(&input, part_b_distance);
+    println!("Part b: {}", soln_b);
     Ok(())
 }
