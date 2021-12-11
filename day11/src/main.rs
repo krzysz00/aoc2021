@@ -95,10 +95,10 @@ fn new_coord_set() -> CoordSet {
 
 const STEPS_A: usize = 100;
 fn part_a(mut arr: ArrayViewMut2<u8>) -> usize {
+    let mut ret = 0;
     let mut flashed = new_coord_set();
     let mut new_flashes = new_coord_set();
     let mut to_test = new_coord_set();
-    let mut ret = 0;
 
     for _i in 0..STEPS_A {
         //println!("Before i = {}\n{:?}", i, arr);
@@ -112,13 +112,33 @@ fn part_a(mut arr: ArrayViewMut2<u8>) -> usize {
     ret
 }
 
+fn part_b(mut arr: ArrayViewMut2<u8>) -> usize {
+    let mut ret = 0;
+    let mut flashed = new_coord_set();
+    let mut new_flashes = new_coord_set();
+    let mut to_test = new_coord_set();
+    loop {
+        if arr.iter().copied().all(|i| i == 0) {
+            break ret;
+        }
+        large_step(arr.view_mut(), &mut flashed, &mut to_test,
+                &mut new_flashes);
+        for coord in flashed.drain() {
+            arr[coord] = 0;
+        }
+        ret += 1;
+    }
+}
+
 fn main() {
     let input_str =
         if std::env::args().any(|x| x == "sample") { SAMPLE } else { PUZZLE };
-    let parsed = parse(input_str);
+    let mut parsed = parse(input_str);
     let mut input_for_a = parsed.clone();
     let soln_a = part_a(input_for_a.view_mut());
     println!("Part a: {}", soln_a);
+    let soln_b = part_b(parsed.view_mut());
+    println!("Part b: {}", soln_b);
 }
 
 const PUZZLE: &'static str = include_str!("input11");
