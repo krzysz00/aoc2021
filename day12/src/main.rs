@@ -20,6 +20,13 @@ struct Graph {
     pub nodes: Vec<Node>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RevisitStatus {
+    Unused,
+    Waiting(usize),
+    Used,
+}
+
 impl Graph {
     pub fn new() -> Self {
         let mut ret = Graph { names: FxHashMap::default(), nodes: vec![] };
@@ -67,22 +74,46 @@ fn create_graph(input_str: &str) -> Graph {
     ret
 }
 
-fn paths_to_end(graph: &Graph, node: usize, visited: &mut FxHashSet<usize>) -> usize {
+fn paths_to_end(graph: &Graph, node: usize, visited: &mut FxHashSet<usize>,
+                   mut revisitable: RevisitStatus) -> usize {
     if node == 1 {
-        return 1;
+        return match revisitable {
+            RevisitStatus::Waiting(_) => 0,
+            _ => 1,
+        }
     }
     let mut ret = 0;
     let this_node = &graph.nodes[node];
-    if !this_node.repeatable {
-        visited.insert(node);
-    }
-    for neighbor in this_node.neighbors.iter().copied() {
-        if !visited.contains(&neighbor) {
-            ret += paths_to_end(graph, neighbor, visited);
+    let can_revisit = !this_node.repeatable &&
+        revisitable == RevisitStatus::Unused && node != 0;
+    for do_revisitable in [true, false] {
+        if !can_revisit && do_revisitable {
+            continue;
         }
-    }
-    if !this_node.repeatable {
-        visited.remove(&node);
+        if !this_node.repeatable {
+            if do_revisitable {
+                revisitable = RevisitStatus::Waiting(node);
+            } else {
+                visited.insert(node);
+                if revisitable == RevisitStatus::Waiting(node) {
+                    revisitable = RevisitStatus::Used;
+                }
+            }
+        }
+        for neighbor in this_node.neighbors.iter().copied() {
+            if !visited.contains(&neighbor) {
+                ret += paths_to_end(graph, neighbor, visited, revisitable);
+            }
+        }
+        if !this_node.repeatable {
+            if do_revisitable {
+                // Can do this since we wouldn't have tried the revisitable branch
+                // if the initial status wasn't "unused"
+                revisitable = RevisitStatus::Unused;
+            } else {
+                visited.remove(&node);
+            }
+        }
     }
     ret
 }
@@ -90,7 +121,13 @@ fn paths_to_end(graph: &Graph, node: usize, visited: &mut FxHashSet<usize>) -> u
 fn part_a(graph: &Graph) -> usize {
     let mut visited = FxHashSet::with_capacity_and_hasher(graph.nodes.len(),
         fxhash::FxBuildHasher::default());
-    paths_to_end(graph, 0, &mut visited)
+    paths_to_end(graph, 0, &mut visited, RevisitStatus::Used)
+}
+
+fn part_b(graph: &Graph) -> usize {
+    let mut visited = FxHashSet::with_capacity_and_hasher(graph.nodes.len(),
+        fxhash::FxBuildHasher::default());
+    paths_to_end(graph, 0, &mut visited, RevisitStatus::Unused)
 }
 
 fn main() {
@@ -99,6 +136,8 @@ fn main() {
     let input = create_graph(input_str);
     let soln_a = part_a(&input);
     println!("Part a: {}", soln_a);
+    let soln_b = part_b(&input);
+    println!("Part b: {}", soln_b);
 }
 
 const PUZZLE: &'static str = include_str!("input12");
@@ -121,3 +160,12 @@ he-WI
 zg-he
 pj-fs
 start-RW";
+/*const SAMPLE: &'static str =
+"start-A
+start-b
+A-c
+A-b
+b-d
+A-end
+b-end";*/
+
