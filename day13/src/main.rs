@@ -113,12 +113,33 @@ fn part_a(points: &FxHashSet<Point>, folds: &[Fold]) -> usize {
     new_points.len()
 }
 
+fn render(points: FxHashSet<Point>) {
+    let max_x = points.iter().map(|p| p.get(Axis::X)).max().unwrap_or(0);
+    let max_y = points.iter().map(|p| p.get(Axis::Y)).max().unwrap_or(0);
+    for y in 0 ..= max_y {
+        for x in 0 ..= max_x {
+            if points.contains(&Point::new(x, y)) {
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        println!();
+    }
+}
+
+fn part_b(points: FxHashSet<Point>, folds: &[Fold]) -> FxHashSet<Point> {
+    folds.iter().copied().fold(points, |p, f| apply_fold(&p, f))
+}
+
 fn main() -> Result<()> {
     let input_str =
         if std::env::args().any(|x| x == "sample") { SAMPLE } else { PUZZLE };
     let (points, folds) = parse(input_str)?;
     let soln_a = part_a(&points, &folds);
     println!("Part a: {}", soln_a);
+    let soln_b = part_b(points, &folds);
+    render(soln_b);
     Ok(())
 }
 
