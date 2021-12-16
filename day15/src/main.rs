@@ -32,18 +32,7 @@ impl Graph {
     }
 }
 
-fn parse(input: &str) -> Graph {
-    let mut m = 0;
-    let mut weights = Vec::with_capacity(input.len());
-    for line in input.lines() {
-        for b in line.bytes() {
-            if b >= b'0' && b <= b'9' {
-                weights.push((b - b'0') as u64);
-            }
-        }
-        m += 1;
-    }
-    let n = weights.len() / m;
+fn to_graph(weights: Vec<u64>, m: usize, n: usize) -> Graph {
     let mut graph = Graph::new(weights);
     for i in 0..m {
         for j in 0..n {
@@ -63,6 +52,48 @@ fn parse(input: &str) -> Graph {
         }
     }
     graph
+}
+
+fn extend_map(orig_weights: &Vec<u64>, m: usize, n: usize) -> Vec<u64> {
+    let mut ret = Vec::with_capacity(orig_weights.len() * 5 * 5);
+    for i in 0..m {
+        for dup in 0..5 {
+            for j in 0..n {
+                let orig = orig_weights[j + n * i];
+                let new = orig + dup;
+                let new = if new > 9 { new - 9 } else { new };
+                ret.push(new);
+            }
+        }
+    }
+    for dup in 1..5 {
+        for c in 0..(m * n * 5) {
+            let orig = ret[c];
+            let new = orig + dup;
+            let new = if new > 9 { new - 9 } else { new };
+            ret.push(new);
+        }
+    }
+    assert_eq!(m * n * 25, ret.len());
+    ret
+}
+
+fn parse(input: &str) -> (Graph, Graph) {
+    let mut m = 0;
+    let mut weights = Vec::with_capacity(input.len());
+    for line in input.lines() {
+        for b in line.bytes() {
+            if b >= b'0' && b <= b'9' {
+                weights.push((b - b'0') as u64);
+            }
+        }
+        m += 1;
+    }
+    let n = weights.len() / m;
+    let ext_weights = extend_map(&weights, m, n);
+    let graph_a = to_graph(weights, m, n);
+    let graph_b = to_graph(ext_weights, m * 5, n * 5);
+    (graph_a, graph_b)
 }
 
 fn dijkstra(g: &Graph, start: usize, end: usize) -> u64 {
@@ -99,14 +130,16 @@ fn dijkstra(g: &Graph, start: usize, end: usize) -> u64 {
     dists[end]
 }
 
-fn part_a(graph: &Graph) -> u64 {
+fn solve(graph: &Graph) -> u64 {
     dijkstra(graph, 0, graph.weights.len() - 1)
 }
 
 fn main() {
     let input_str =
         if std::env::args().any(|x| x == "sample") { SAMPLE } else { PUZZLE };
-    let graph = parse(input_str);
-    let soln_a = part_a(&graph);
+    let (graph_a, graph_b) = parse(input_str);
+    let soln_a = solve(&graph_a);
     println!("Part a: {}", soln_a);
+    let soln_b = solve(&graph_b);
+    println!("Part b: {}", soln_b);
 }
