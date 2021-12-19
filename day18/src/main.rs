@@ -43,6 +43,17 @@ fn append(left: Node, right: Node) -> Node {
     ret
 }
 
+fn deep_clone(node: &Node) -> Node {
+    let node = node.lock();
+    if let Some(v) = node.value {
+        leaf(v)
+    } else {
+        let left = deep_clone(node.left.as_ref().unwrap());
+        let right = deep_clone(node.right.as_ref().unwrap());
+        append(left, right)
+    }
+}
+
 fn predecessor(node: &Node) -> Option<Node> {
     let node_lock = node.lock();
     match node_lock.left.as_ref() {
@@ -303,24 +314,34 @@ fn magnitude(node: &Node) -> u32 {
     }
 }
 
-fn part_a(input_str: &str) -> Node {
-    let mut iter = input_str.lines();
-    let mut ret = parse(iter.next().unwrap().as_bytes(), 0).0;
-    for succ in iter {
-        ret = add(ret, parse(succ.as_bytes(), 0).0);
-        print_tree(&ret);
-        println!();
-    }
-    ret
+fn part_a(input: &[Node]) -> Node {
+    input[1..].iter()
+        .fold(deep_clone(&input[0]), |l, r| add(l, deep_clone(r)))
+}
+
+fn part_b(input: &[Node]) -> u32 {
+    let len = input.len();
+    (0..len).flat_map(move |i| (0..len).filter_map(move |j| {
+        if i == j { None } else { Some((i, j)) }
+    })).map(|(i, j)| {
+        let left = deep_clone(&input[i]);
+        let right = deep_clone(&input[j]);
+        let addend = add(left, right);
+        magnitude(&addend)
+    }).max().expect("At least one addition happened")
 }
 
 fn main() {
     let input_str =
         if std::env::args().any(|a| a == "sample") { SAMPLE } else { PUZZLE };
-    let soln_a_node = part_a(input_str);
+    let parsed: Vec<Node> =
+        input_str.lines().map(|l| parse(l.as_bytes(), 0).0).collect();
+    let soln_a_node = part_a(&parsed);
     print_tree(&soln_a_node);
     println!();
     println!("Part a: {}", magnitude(&soln_a_node));
+    let soln_b = part_b(&parsed);
+    println!("Part b: {}", soln_b);
 }
 
 const PUZZLE: &'static str = include_str!("input18");
